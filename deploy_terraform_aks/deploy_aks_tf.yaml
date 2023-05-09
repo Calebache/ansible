@@ -1,0 +1,40 @@
+---
+- name: Deploy Terraform module in one workspace
+  hosts: localhost
+  connection: local
+
+  vars:
+    terraform_module_git_repo: "https://github.com/example/terraform-module.git"
+    terraform_module_dir: "/opt/terraform_module"
+    terraform_workspace: "{{ 'production' if production_env else 'dev' }}"
+
+  tasks:
+    - name: Clone Terraform module Git repo
+      git:
+        repo: "{{ terraform_module_git_repo }}"
+        dest: "{{ terraform_module_dir }}"
+        version: "main"
+
+    - name: Initialize Terraform
+      command: >
+        terraform init
+      args:
+        chdir: "{{ terraform_module_dir }}"
+
+    - name: Validate Terraform configuration
+      command: >
+        terraform validate
+      args:
+        chdir: "{{ terraform_module_dir }}"
+
+    - name: Plan Terraform configuration
+      command: >
+        terraform plan -input=false -lock=false -out=tfplan
+      args:
+        chdir: "{{ terraform_module_dir }}"
+
+    - name: Switch to Terraform workspace and apply module
+      command: >
+        terraform workspace select "{{ terraform_workspace }}" && terraform apply -auto-approve
+      args:
+        chdir: "{{ terraform_module_dir }}"
